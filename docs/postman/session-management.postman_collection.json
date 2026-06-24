@@ -1,0 +1,56 @@
+{
+  "info": {
+    "name": "NexusForge Session Management",
+    "_postman_id": "nexusforge-sessions",
+    "description": "Collection for session listing and revocation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Sessions (me)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_url}}/api/v1/auth/sessions",
+          "host": ["{{api_url}}"],
+          "path": ["api","v1","auth","sessions"]
+        }
+      }
+    },
+    {
+      "name": "Revoke Session",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": {
+          "raw": "{{api_url}}/api/v1/auth/sessions/:id",
+          "host": ["{{api_url}}"],
+          "path": ["api","v1","auth","sessions",":id"]
+        }
+      }
+    },
+    {
+      "name": "Revoke All Sessions",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": {
+          "raw": "{{api_url}}/api/v1/auth/sessions",
+          "host": ["{{api_url}}"],
+          "path": ["api","v1","auth","sessions"]
+        }
+      }
+    }
+  ],
+  "event": []
+}

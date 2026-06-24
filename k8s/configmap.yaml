@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexusforge-config
+  namespace: nexusforge
+data:
+  NODE_ENV: production
+  APP_PORT: "4000"
+  WEB_PORT: "3000"
+  REDIS_URL: redis://redis.nexusforge.svc.cluster.local:6379
+  ELASTICSEARCH_URL: http://elasticsearch.nexusforge.svc.cluster.local:9200
+  WEB_APP_URL: https://app.nexusforge.com
+  API_URL: https://api.nexusforge.com

@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  CLIENT
+  ENGINEER
+  AGENCY
+  INVESTOR
+  BUYER
+  SELLER
+}
+
+enum VerificationType {
+  EMAIL
+  PASSWORD_RESET
+  MFA_SETUP
+}
+
+enum AssetStatus {
+  DRAFT
+  LISTED
+  PENDING_REVIEW
+  VERIFIED
+  SOLD
+  ARCHIVED
+}
+
+enum TransactionStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  REFUNDED
+  FAILED
+}
+
+enum EscrowStatus {
+  OPEN
+  FUNDED
+  RELEASED
+  DISPUTED
+  CLOSED
+}
+
+enum NotificationType {
+  SYSTEM
+  SECURITY
+  MARKETPLACE
+  PAYMENT
+  MESSAGE
+}
+
+enum ReportStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_REVIEW
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id                String               @id @default(cuid())
+  email             String               @unique
+  passwordHash      String?
+  firstName         String?
+  lastName          String?
+  displayName       String?
+  avatarUrl         String?
+  bio               String?
+  phoneNumber       String?
+  companyName       String?
+  timezone          String?
+  locale            String               @default("en")
+  isEmailVerified   Boolean              @default(false)
+  isMfaEnabled      Boolean              @default(false)
+  mfaSecret         String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  roles             UserRole[]
+  oauthAccounts     OAuthAccount[]
+  sessions          Session[]
+  verifications     VerificationToken[]
+  kycRecords        KycVerification[]
+  projects          Project[]
+  proposals         Proposal[]
+  transactions      Transaction[]
+  notifications     Notification[]
+  sentMessages      Message[]            @relation("MessageSender")
+  receivedMessages   Message[]            @relation("MessageRecipient")
+  reviewsGiven      Review[]             @relation("ReviewAuthor")
+  reviewsReceived   Review[]             @relation("ReviewSubject")
+  aiReports         AIReport[]
+  investments       Investment[]
+  ownedDomains      Domain[]             @relation("DomainOwner")
+  ownedWebsites     Website[]            @relation("WebsiteOwner")
+  ownedApps         AppAsset[]           @relation("AppOwner")
+  auditLogs         AuditLog[]
+  escrowCreated     Escrow[]             @relation("EscrowCreator")
+  escrowBuyer       Escrow[]             @relation("EscrowBuyer")
+  escrowSeller      Escrow[]             @relation("EscrowSeller")
+}
+
+model Role {
+  id        String      @id @default(cuid())
+  name      RoleName    @unique
+  label     String
+  createdAt DateTime    @default(now())
+  users     UserRole[]
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  assignedAt DateTime @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model VerificationToken {
+  id        String            @id @default(cuid())
+  type      VerificationType
+  tokenHash String            @unique
+  userId    String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model KycVerification {
+  id              String   @id @default(cuid())
+  userId          String
+  status          String   @default("PENDING")
+  provider        String?
+  referenceId     String?
+  documentType    String?
+  documentNumber  String?
+  submittedAt     DateTime  @default(now())
+  reviewedAt      DateTime?
+  reviewerId      String?
+  notes           String?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  ownerId        String
+  title          String
+  slug           String        @unique
+  description    String
+  budgetMin      Decimal?      @db.Decimal(14, 2)
+  budgetMax      Decimal?      @db.Decimal(14, 2)
+  timelineDays   Int?
+  status         ProjectStatus @default(OPEN)
+  requirements   Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  proposals      Proposal[]
+}
+
+model Proposal {
+  id             String   @id @default(cuid())
+  projectId      String
+  proposerId     String
+  coverLetter    String
+  price          Decimal  @db.Decimal(14, 2)
+  timelineDays   Int
+  status         String   @default("SUBMITTED")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  proposer       User     @relation(fields: [proposerId], references: [id], onDelete: Cascade)
+}
+
+model Domain {
+  id              String        @id @default(cuid())
+  ownerId         String
+  name            String        @unique
+  tld             String
+  status          AssetStatus   @default(DRAFT)
+  askingPrice     Decimal?      @db.Decimal(14, 2)
+  valuation       Decimal?      @db.Decimal(14, 2)
+  expirationDate  DateTime?
+  watchCount      Int           @default(0)
+  seoScore        Float?
+  brandabilityScore Float?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  owner           User          @relation("DomainOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Website {
+  id              String      @id @default(cuid())
+  ownerId         String
+  title           String
+  category        String
+  status          AssetStatus @default(DRAFT)
+  askingPrice     Decimal?    @db.Decimal(14, 2)
+  revenueMonthly  Decimal?    @db.Decimal(14, 2)
+  trafficMonthly  Int?
+  seoScore        Float?
+  growthTrend     Json?
+  sourceCodeStatus String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  owner           User        @relation("WebsiteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model AppAsset {
+  id              String      @id @default(cuid())
+  ownerId         String
+  title           String
+  category        String
+  status          AssetStatus @default(DRAFT)
+  platform        String
+  downloads       Int?
+  revenueMonthly  Decimal?    @db.Decimal(14, 2)
+  activeUsers     Int?
+  techStack       Json?
+  sourceCodeStatus String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  owner           User        @relation("AppOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Investment {
+  id             String   @id @default(cuid())
+  investorId     String
+  assetType      String
+  assetId        String
+  amount         Decimal  @db.Decimal(14, 2)
+  equityPercent  Float?
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  investor       User     @relation(fields: [investorId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id             String             @id @default(cuid())
+  userId         String
+  provider       String
+  providerRef    String?
+  currency       String             @default("USD")
+  amount         Decimal            @db.Decimal(14, 2)
+  status         TransactionStatus  @default(PENDING)
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Escrow {
+  id             String        @id @default(cuid())
+  creatorId      String
+  buyerId        String
+  sellerId       String
+  currency       String        @default("USD")
+  amount         Decimal       @db.Decimal(14, 2)
+  status         EscrowStatus  @default(OPEN)
+  milestones     Json?
+  releaseDate    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  creator        User          @relation("EscrowCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  buyer          User          @relation("EscrowBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller         User          @relation("EscrowSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  senderId       String
+  recipientId    String
+  roomId         String?
+  content        String
+  attachments    Json?
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+  sender         User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient      User     @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id             String             @id @default(cuid())
+  userId         String
+  type           NotificationType    @default(SYSTEM)
+  title          String
+  body           String
+  link           String?
+  isRead         Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  authorId       String
+  subjectId      String
+  rating         Int
+  title          String?
+  body           String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  author         User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  subject        User     @relation("ReviewSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+model AIReport {
+  id             String        @id @default(cuid())
+  userId         String
+  entityType     String
+  entityId       String
+  status         ReportStatus  @default(PENDING)
+  summary        String
+  payload        Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  userId         String?
+  action         String
+  entityType     String?
+  entityId       String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

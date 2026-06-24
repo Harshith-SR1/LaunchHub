@@ -1,0 +1,11 @@
+{
+  "name": "@nexusforge/api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": ".\\.venv\\Scripts\\uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+    "start": ".\\.venv\\Scripts\\uvicorn main:app --host 127.0.0.1 --port 8000",
+    "build": "echo \"Python backend does not require npm build\"",
+    "lint": "echo \"Python backend lint placeholder\""
+  }
+}

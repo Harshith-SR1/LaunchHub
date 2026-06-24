@@ -1,0 +1,25 @@
+{
+  "name": "nexusforge",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@10.8.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev --workspace @nexusforge/web\" \"npm run dev --workspace @nexusforge/api\"",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "dev:web": "npm run dev --workspace @nexusforge/web",
+    "dev:api": "npm run dev --workspace @nexusforge/api",
+    "db:generate": "npm run prisma:generate --workspace @nexusforge/api",
+    "db:migrate": "npm run prisma:migrate --workspace @nexusforge/api",
+    "db:studio": "npm run prisma:studio --workspace @nexusforge/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.3.3",
+    "typescript": "^5.8.3"
+  }
+}

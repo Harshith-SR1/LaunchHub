@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexusforge-web
+  namespace: nexusforge
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexusforge-web
+  template:
+    metadata:
+      labels:
+        app: nexusforge-web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/your-org/nexusforge-web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: API_URL
+              value: http://nexusforge-api.nexusforge.svc.cluster.local
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
