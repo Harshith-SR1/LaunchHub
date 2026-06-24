@@ -9,11 +9,7 @@ export default function NotFound() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  const links = [
-    { href: '/', label: 'Return Home', icon: Home, primary: true },
-    { href: '/marketplace', label: 'Browse Marketplace', icon: Compass, primary: false },
-    { href: '/navigator', label: 'Venture Navigator', icon: Sparkles, primary: false },
-  ];
+
 
   return (
     <main className="relative min-h-screen w-full bg-bg grid-bg flex items-center justify-center p-6 overflow-hidden">
@@ -87,20 +83,15 @@ export default function NotFound() {
 
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          {links.map(({ href, label, icon: Icon, primary }) => (
-            <Link
-              key={href}
-              href={href}
-              className={
-                primary
-                  ? 'btn-primary justify-center'
-                  : 'btn-secondary justify-center'
-              }
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          ))}
+          <Link href="/" className="btn-primary justify-center">
+            <Home className="h-4 w-4" /> Return Home
+          </Link>
+          <Link href="/marketplace" className="btn-secondary justify-center">
+            <Compass className="h-4 w-4" /> Browse Marketplace
+          </Link>
+          <Link href="/navigator" className="btn-secondary justify-center">
+            <Sparkles className="h-4 w-4" /> Venture Navigator
+          </Link>
         </div>
       </motion.div>
     </main>
