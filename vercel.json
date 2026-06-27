@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build --workspace @nexusforge/web",
-  "outputDirectory": "apps/web/.next"
+  "outputDirectory": ".next"
 }
