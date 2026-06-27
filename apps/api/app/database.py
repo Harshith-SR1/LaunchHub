@@ -14,6 +14,21 @@ def _convert_floats_to_decimals(obj):
         return [_convert_floats_to_decimals(v) for v in obj]
     return obj
 
+def _deserialize_item(obj):
+    """Recursively convert DynamoDB Decimal types to native Python float/int."""
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    elif isinstance(obj, dict):
+        return {k: _deserialize_item(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_deserialize_item(v) for v in obj]
+    return obj
+
+def _deserialize_items(items):
+    """Deserialize a list of DynamoDB items."""
+    return [_deserialize_item(item) for item in items]
+
+
 class MockDynamoDB:
     def __init__(self, filename="launchhub_dynamodb_mock.json"):
         self.filename = filename
@@ -238,7 +253,8 @@ class DatabaseManager:
             return self.client.get_item(Key)
         else:
             res = self.client.get_item(Key=Key)
-            return {"Item": res.get("Item")} if "Item" in res else {}
+            item = res.get("Item")
+            return {"Item": _deserialize_item(item)} if item else {}
 
     def delete_item(self, Key):
         if self.is_mock:
@@ -257,7 +273,8 @@ class DatabaseManager:
             if IndexName:
                 kwargs["IndexName"] = IndexName
             res = self.client.query(**kwargs)
-            return {"Items": res.get("Items", []), "Count": res.get("Count", 0)}
+            items = _deserialize_items(res.get("Items", []))
+            return {"Items": items, "Count": len(items)}
 
     def scan(self, FilterExpression=None, ExpressionAttributeValues=None):
         if self.is_mock:
@@ -269,7 +286,8 @@ class DatabaseManager:
             if ExpressionAttributeValues:
                 kwargs["ExpressionAttributeValues"] = ExpressionAttributeValues
             res = self.client.scan(**kwargs)
-            return {"Items": res.get("Items", []), "Count": res.get("Count", 0)}
+            items = _deserialize_items(res.get("Items", []))
+            return {"Items": items, "Count": len(items)}
 
     def update_item(self, Key, UpdateExpression, ExpressionAttributeValues, ExpressionAttributeNames=None):
         if self.is_mock:
@@ -278,11 +296,13 @@ class DatabaseManager:
             kwargs = {
                 "Key": Key,
                 "UpdateExpression": UpdateExpression,
-                "ExpressionAttributeValues": _convert_floats_to_decimals(ExpressionAttributeValues)
+                "ExpressionAttributeValues": _convert_floats_to_decimals(ExpressionAttributeValues),
+                "ReturnValues": "ALL_NEW"
             }
             if ExpressionAttributeNames:
                 kwargs["ExpressionAttributeNames"] = ExpressionAttributeNames
             res = self.client.update_item(**kwargs)
-            return {"Attributes": res.get("Attributes", {})}
+            attrs = res.get("Attributes", {})
+            return {"Attributes": _deserialize_item(attrs)}
 
 db = DatabaseManager()

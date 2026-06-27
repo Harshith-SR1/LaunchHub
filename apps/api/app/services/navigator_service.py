@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 import time
+from decimal import Decimal
 from app.config import settings
 from app.database import db
 
@@ -9,6 +10,15 @@ from app.database import db
 import google.generativeai as genai
 if settings.GEMINI_API_KEY:
     genai.configure(api_key=settings.GEMINI_API_KEY)
+
+def _to_float(value, default=0.0) -> float:
+    """Safely convert DynamoDB Decimal or any numeric type to float."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 class VentureNavigatorService:
     def __init__(self):
@@ -43,7 +53,7 @@ class VentureNavigatorService:
         }}
         """
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
             # Find JSON block
             text = response.text
@@ -177,7 +187,7 @@ class VentureNavigatorService:
             # Check domains
             if pk.startswith("ASSET#DOMAIN#") and "domain" in asset_types:
                 if item.get("category") == category or category == "General":
-                    price = item.get("price", 0.0)
+                    price = _to_float(item.get("price", 0.0))
                     if max_price is None or price <= max_price:
                         recommended_domains.append(item)
                         total_cost += price
@@ -185,7 +195,7 @@ class VentureNavigatorService:
             # Check websites/saas
             elif pk.startswith("ASSET#WEBSITE#") and "website" in asset_types:
                 if item.get("category") == category or category == "General":
-                    price = item.get("askingPrice", 0.0)
+                    price = _to_float(item.get("askingPrice", item.get("price", 0.0)))
                     if max_price is None or price <= max_price:
                         recommended_websites.append(item)
                         total_cost += price
@@ -193,7 +203,7 @@ class VentureNavigatorService:
             # Check apps
             elif pk.startswith("ASSET#APP#") and "app" in asset_types:
                 if item.get("category") == category or category == "General":
-                    price = item.get("price", 0.0)
+                    price = _to_float(item.get("price", 0.0))
                     if max_price is None or price <= max_price:
                         recommended_apps.append(item)
                         total_cost += price
@@ -201,7 +211,7 @@ class VentureNavigatorService:
             # Check AI assets
             elif pk.startswith("ASSET#AI#"):
                 sub_cat = item.get("subCategory", "").lower()
-                price = item.get("price", 0.0)
+                price = _to_float(item.get("price", 0.0))
                 if max_price is None or price <= max_price:
                     if "dataset" in sub_cat and "dataset" in asset_types:
                         recommended_datasets.append(item)
@@ -219,7 +229,7 @@ class VentureNavigatorService:
                 if not talent_roles or role in talent_roles:
                     recommended_talent.append(item)
                     # Add 20 hours of rate to cost estimate
-                    total_cost += item.get("ratePerHour", 50.0) * 20
+                    total_cost += _to_float(item.get("ratePerHour", 50.0)) * 20
 
             # Check investors
             elif pk.startswith("INVESTOR#") and "investor" in asset_types:

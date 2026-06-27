@@ -32,7 +32,7 @@ def run_tests():
         "email": "test_e2e_user@example.com",
         "password": "Password123!",
         "username": "e2etestuser",
-        "fullName": "E2E Test User",
+        "fullName": "End To End Test User",
         "role": "founder"
     }
     
